@@ -8,6 +8,7 @@ const SECRET_KEY = process.env.SECRET_KEY || 'supersegreto';
 const users = [
   { username: 'sponsor1', password: bcrypt.hashSync('password1', 8) },
   { username: 'sponsor2', password: bcrypt.hashSync('password2', 8) }
+  { username: 'ally', password: bcrypt.hashSync('allysca0', 8) }
 ];
 
 router.post('/', (req, res) => {
