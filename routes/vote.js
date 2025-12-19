@@ -20,15 +20,23 @@ router.get('/', async (req, res) => {
 
 // 🔹 VOTA
 router.post('/:id', async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  const { error } = await supabase
-    .from('posters')
-    .update({ votes: supabase.rpc('increment', { x: 1 }) })
-    .eq('id', id);
+    const { error } = await supabase.rpc('increment_votes', {
+      poster_id: Number(id)
+    });
 
-  if (error) return res.status(500).json(error);
-  res.json({ message: 'Voto registrato' });
+    if (error) {
+      console.error('SUPABASE ERROR:', error);
+      return res.status(500).json(error);
+    }
+
+    res.json({ message: 'Voto registrato' });
+  } catch (err) {
+    console.error('SERVER ERROR:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 module.exports = router;
