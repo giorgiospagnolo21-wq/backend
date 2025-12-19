@@ -9,16 +9,25 @@ const supabase = createClient(
 
 // 🔹 GET poster pubblici + voti
 router.get('/', async (req, res) => {
-  const { data, error } = await supabase
-    .from('posters')
-    .select('id, file, description, votes')
-    .order('votes', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('posters')
+      .select('id, file, description, votes')
+      .order('votes', { ascending: false });
 
-  if (error) return res.status(500).json(error);
-  res.json(data);
+    if (error) {
+      console.error(error);
+      return res.status(500).json(error);
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-// 🔹 VOTA
+// 🔹 VOTA (CORRETTO)
 router.post('/:id', async (req, res) => {
   try {
     const { id } = req.params;
