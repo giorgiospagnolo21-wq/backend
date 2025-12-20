@@ -1,34 +1,56 @@
 const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+const router = express.Router();
+const { createClient } = require('@supabase/supabase-js');
 
-const app = express();
+// Client Supabase (usa SERVICE_ROLE KEY dal backend)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
-// 🔹 CORS (PRIMA DI QUALSIASI ROUTE)
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// 🔹 GET poster pubblici con voti (ORDINATI)
+router.get('/', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('posters')
+      .select('id, file, description, votes')
+      .order('votes', { ascending: false });
 
-app.options('*', cors());
+    if (error) {
+      console.error('SUPABASE GET ERROR:', error);
+      return res.status(500).json({ error: 'Errore lettura poster' });
+    }
 
-// 🔹 Body parser
-app.use(express.json());
-
-// 🔹 Routes
-app.use('/api/login', require('./routes/login'));
-app.use('/api/upload', require('./routes/upload'));
-app.use('/api/delete', require('./routes/delete'));
-app.use('/api/posters', require('./routes/posters'));
-app.use('/api/vote', require('./routes/vote'));
-
-// 🔹 Health check (FONDAMENTALE PER RENDER)
-app.get('/', (req, res) => {
-  res.send('Backend running');
+    res.json(data);
+  } catch (err) {
+    console.error('SERVER GET ERROR:', err);
+    res.status(500).json({ error: 'Errore server' });
+  }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server attivo su porta ${PORT}`);
+// 🔹 POST voto (RPC sicura)
+router.post('/:id', async (req, res) => {
+  try {
+    const posterId = Number(req.params.id);
+
+    if (isNaN(posterId)) {
+      return res.status(400).json({ error: 'ID non valido' });
+    }
+
+    const { error } = await supabase.rpc('increment_votes', {
+      poster_id: posterId
+    });
+
+    if (error) {
+      console.error('SUPABASE RPC ERROR:', error);
+      return res.status(500).json({ error: 'Errore voto' });
+    }
+
+    res.json({ message: 'Voto registrato' });
+  } catch (err) {
+    console.error('SERVER POST ERROR:', err);
+    res.status(500).json({ error: 'Errore server' });
+  }
 });
+
+module.exports = router;
