@@ -2,13 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 
-// Client Supabase (usa SERVICE_ROLE KEY dal backend)
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
 
-// 🔹 GET poster pubblici con voti (ORDINATI)
+// 🔹 GET poster pubblici + voti
 router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -17,39 +16,51 @@ router.get('/', async (req, res) => {
       .order('votes', { ascending: false });
 
     if (error) {
-      console.error('SUPABASE GET ERROR:', error);
-      return res.status(500).json({ error: 'Errore lettura poster' });
+      console.error('GET ERROR:', error);
+      return res.status(500).json(error);
     }
 
     res.json(data);
   } catch (err) {
-    console.error('SERVER GET ERROR:', err);
-    res.status(500).json({ error: 'Errore server' });
+    console.error('SERVER ERROR:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// 🔹 POST voto (RPC sicura)
+// 🔹 VOTA (SENZA RPC – FUNZIONA SICURO)
 router.post('/:id', async (req, res) => {
   try {
-    const posterId = Number(req.params.id);
+    const id = Number(req.params.id);
 
-    if (isNaN(posterId)) {
-      return res.status(400).json({ error: 'ID non valido' });
+    // 1️⃣ prendo i voti attuali
+    const { data, error: selectError } = await supabase
+      .from('posters')
+      .select('votes')
+      .eq('id', id)
+      .single();
+
+    if (selectError) {
+      console.error('SELECT ERROR:', selectError);
+      return res.status(500).json(selectError);
     }
 
-    const { error } = await supabase.rpc('increment_votes', {
-      poster_id: posterId
-    });
+    const currentVotes = data.votes ?? 0;
 
-    if (error) {
-      console.error('SUPABASE RPC ERROR:', error);
-      return res.status(500).json({ error: 'Errore voto' });
+    // 2️⃣ aggiorno i voti
+    const { error: updateError } = await supabase
+      .from('posters')
+      .update({ votes: currentVotes + 1 })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('UPDATE ERROR:', updateError);
+      return res.status(500).json(updateError);
     }
 
     res.json({ message: 'Voto registrato' });
   } catch (err) {
-    console.error('SERVER POST ERROR:', err);
-    res.status(500).json({ error: 'Errore server' });
+    console.error('SERVER ERROR:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
