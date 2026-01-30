@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
       return res.status(500).json(error);
     }
 
-    res.json(data);
+    res.json(data); // <-- deve essere ARRAY
   } catch (err) {
     console.error('SERVER ERROR:', err);
     res.status(500).json({ error: 'Server error' });
@@ -65,3 +65,4 @@ router.post('/:id', async (req, res) => {
 });
 
 module.exports = router;
+
