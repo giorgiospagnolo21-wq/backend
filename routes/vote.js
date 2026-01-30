@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('posters')
-      .select('id, file, description, votes')
+      .select('id, file, description, votes, title')
       .order('votes', { ascending: false });
 
     if (error) {
@@ -65,4 +65,5 @@ router.post('/:id', async (req, res) => {
 });
 
 module.exports = router;
+
 
