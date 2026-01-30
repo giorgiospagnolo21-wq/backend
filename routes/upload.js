@@ -55,6 +55,8 @@ router.post('/', verifyToken, upload.single('poster'), async (req, res) => {
   try {
     const file = req.file;
     const description = req.body.description || '';
+    const title = req.body.title || '';
+if (!title.trim()) return res.status(400).json({ message: 'Titolo obbligatorio' });
 
     if (!file) return res.status(400).json({ message: 'Nessun file ricevuto' });
 
