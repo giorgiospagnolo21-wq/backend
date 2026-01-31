@@ -12,49 +12,29 @@ router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('posters')
-      .select('id, file, description, votes, title')
+      .select('id, file, description, votes')
       .order('votes', { ascending: false });
 
-    if (error) {
-      console.error('GET ERROR:', error);
-      return res.status(500).json(error);
-    }
-
-    res.json(data); // <-- deve essere ARRAY
+    if (error) return res.status(500).json(error);
+    res.json(data);
   } catch (err) {
-    console.error('SERVER ERROR:', err);
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// 🔹 VOTA (SENZA RPC – FUNZIONA SICURO)
+// 🔹 VOTA (RPC DEFINITIVA)
 router.post('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
 
-    // 1️⃣ prendo i voti attuali
-    const { data, error: selectError } = await supabase
-      .from('posters')
-      .select('votes')
-      .eq('id', id)
-      .single();
+    const { error } = await supabase.rpc('increment_votes', {
+      poster_id: id
+    });
 
-    if (selectError) {
-      console.error('SELECT ERROR:', selectError);
-      return res.status(500).json(selectError);
-    }
-
-    const currentVotes = data.votes ?? 0;
-
-    // 2️⃣ aggiorno i voti
-    const { error: updateError } = await supabase
-      .from('posters')
-      .update({ votes: currentVotes + 1 })
-      .eq('id', id);
-
-    if (updateError) {
-      console.error('UPDATE ERROR:', updateError);
-      return res.status(500).json(updateError);
+    if (error) {
+      console.error('SUPABASE ERROR:', error);
+      return res.status(500).json(error);
     }
 
     res.json({ message: 'Voto registrato' });
@@ -65,5 +45,3 @@ router.post('/:id', async (req, res) => {
 });
 
 module.exports = router;
-
-
