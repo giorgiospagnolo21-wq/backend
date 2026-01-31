@@ -17,73 +17,23 @@ function verifyToken(req, res, next) {
   });
 }
 
-// Estrae il path dell'oggetto storage dall'URL pubblico di Supabase
-// Esempio URL:
-// https://xxxx.supabase.co/storage/v1/object/public/posters/posters/NOMEFILE.jpg
-// -> ritorna "posters/NOMEFILE.jpg"
-function extractObjectPathFromPublicUrl(publicUrl) {
-  try {
-    const u = new URL(publicUrl);
-    const marker = '/storage/v1/object/public/posters/';
-    const idx = u.pathname.indexOf(marker);
-    if (idx === -1) return null;
-    return u.pathname.slice(idx + marker.length); // es: "posters/FILE"
-  } catch {
-    return null;
-  }
-}
-
 router.delete('/:id', verifyToken, async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    // 1) Prendo il poster
-    const { data: posterData, error: fetchError } = await supabase
-      .from('posters')
-      .select('*')
-      .eq('id', id)
-      .single();
+  const { data: posterData, error: fetchError } = await supabase
+    .from('posters')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-    if (fetchError || !posterData) {
-      return res.status(404).json({ message: 'Poster non trovato' });
-    }
+  if (fetchError || !posterData) return res.status(404).json({ message: 'Poster non trovato' });
 
-    // (Opzionale) Se vuoi impedire di eliminare poster di altri:
-    // if (posterData.uploadedBy !== req.username) {
-    //   return res.status(403).json({ message: 'Non puoi eliminare questo poster' });
-    // }
+  await supabase.from('posters').delete().eq('id', id);
 
-    // 2) Cancello la riga dal DB
-    const { error: delError } = await supabase
-      .from('posters')
-      .delete()
-      .eq('id', id);
+  const filePath = posterData.file.split('/posters/')[1];
+  await supabase.storage.from('posters').remove([`posters/${filePath}`]);
 
-    if (delError) {
-      return res.status(500).json({ message: delError.message });
-    }
-
-    // 3) Cancello il file su Storage (se riesco a ricavare il path)
-    const objectPath = extractObjectPathFromPublicUrl(posterData.file);
-
-    if (objectPath) {
-      const { error: storageError } = await supabase.storage
-        .from('posters')
-        .remove([objectPath]); // IMPORTANTISSIMO: NON aggiungere "posters/" davanti
-
-      // Se lo storage fallisce, non blocco: il DB è già pulito
-      if (storageError) {
-        console.error('Storage remove error:', storageError);
-      }
-    } else {
-      console.warn('Impossibile estrarre objectPath da URL:', posterData.file);
-    }
-
-    return res.json({ message: 'Poster eliminato con successo' });
-  } catch (err) {
-    console.error('DELETE ERROR:', err);
-    return res.status(500).json({ message: 'Errore interno eliminazione' });
-  }
+  res.json({ message: 'Poster eliminato con successo' });
 });
 
 module.exports = router;
