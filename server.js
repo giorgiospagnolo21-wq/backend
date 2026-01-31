@@ -1,34 +1,34 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+
+const loginRoute = require('./routes/login');
+const uploadRoute = require('./routes/upload');
+const postersRoute = require('./routes/posters');
+const deleteRoute = require('./routes/delete');
+const voteRoute = require('./routes/vote');
 
 const app = express();
 
-// 🔹 CORS (PRIMA DI QUALSIASI ROUTE)
+// ✅ CORS COMPLETO (QUESTO RISOLVE DELETE + AUTH)
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
 }));
 
-app.options('*', cors());
+app.options('*', cors()); // preflight
 
-// 🔹 Body parser
 app.use(express.json());
 
-// 🔹 Routes
-app.use('/api/login', require('./routes/login'));
-app.use('/api/upload', require('./routes/upload'));
-app.use('/api/delete', require('./routes/delete'));
-app.use('/api/posters', require('./routes/posters'));
-app.use('/api/vote', require('./routes/vote'));
+// routes
+app.use('/api/login', loginRoute);
+app.use('/api/upload', uploadRoute);
+app.use('/api/posters', postersRoute);
+app.use('/api/delete', deleteRoute);
+app.use('/api/vote', voteRoute);
 
-// 🔹 Health check (FONDAMENTALE PER RENDER)
-app.get('/', (req, res) => {
-  res.send('Backend running');
-});
-
-const PORT = process.env.PORT || 5000;
+// porta
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server attivo su porta ${PORT}`);
+  console.log('Server avviato sulla porta', PORT);
 });
